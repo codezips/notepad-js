@@ -1,0 +1,244 @@
+
+<html>
+<head>
+<title id='title'>HTML5 Notepad</title>
+<link rel="icon" type="image/gif" href="/notepad-icon.gif" />
+<link rel="stylesheet" href="./octicons/octicons.css">
+<script>
+
+/*
+
+Future features:
+  - Split the content and the title into an input box above the textarea and the textarea based on the string.split('\n')[0] and string.split('\n')[1]
+
+Because localStorage only allows key/value pairs, I cannot create objects for notebooks with title and content properties. The title of a notebook will have to be the first 15 or so chars of the content. Therefore to change the notebook title, the user simply opens the notebook and changes the first line.
+
+The 'key' of each key/value pair will be like "notebook_0", "notebook_1", ... and the 'value' will be the content. The id of the tabs will be the same as the key used ("notebook_0", "notebook_1", ...). This means there should be no renaming the keys, only adding and removing. Adding a notebook will simply add a notebook with the next logical id.
+
+// Store
+localStorage.setItem("lastname", "Smith");
+// Retrieve
+localStorage.getItem("lastname");
+// Remove
+localStorage.removeItem("lastname");
+
+*/
+
+// localStorage.removeItem("notebookCount") ;
+
+/*
+// Testing settings / reset the browser
+for (var key in localStorage) {
+  var myIndex = key.indexOf("notebook_") ;
+  if (myIndex !== -1) {
+    localStorage.removeItem(key) ;
+    console.log("removed localStorage item: " + key) ;
+  }
+}
+*/
+
+welcomeMessage = "Welcome to HTML5 Notepad by Austin Heiman\n\
+    Your notebooks appear on the left, and the content appears here. Your changes are saved automatically as you type. There's almost no limit to what you create!" ;
+
+if (typeof(localStorage.notebookCount) === "undefined") {
+  // first time to site, set up with example notebooks and alert of what they are using
+  removeAllNotebooks() ;
+  console.log("first time user detected. setting example notebooks, notebookCount, and selectedTab vars.") ;
+  localStorage.notebook_0 = welcomeMessage ;
+  localStorage.notebookCount = "1" ;
+  localStorage.selectedTab = "notebook_0" ;
+}
+
+function main() {
+  var tabsContainer = document.getElementById("tabsContainer") ;
+  var notepad = document.getElementById("notepad") ;
+  // fill idsArray with notebook numbers
+  var idsArray = getIdsArray() ;
+  // clear tabs container
+  var tabsContainerInnerHTML = "" ;
+  // load title of each notepad into the tabsContainer
+  for (var i = 0 ; i < localStorage.notebookCount ; i++) {
+    var notebookId = idsArray[i] ;
+    var title = getTitle(localStorage[notebookId]) ;
+    var tabHTML = "<div class='tab' id='"+notebookId+"' onclick='selectTab(this.id)'>"+title+"</div>" ;
+    tabsContainerInnerHTML += tabHTML ;
+  }
+  // if only one notebook, do not display delete icon
+  var buttonsHTML = "<center>\
+    <span class='mega-octicon octicon-diff-added' onclick='addNotebook()'></span>" ;
+  if (localStorage.notebookCount != 1) {
+    buttonsHTML += "<span class='mega-octicon octicon-trashcan' onclick='deleteNotebook(localStorage.selectedTab)'></span>" ;
+  }
+  buttonsHTML += "</center>" ;
+  tabsContainerInnerHTML += buttonsHTML ;
+  tabsContainer.innerHTML = tabsContainerInnerHTML ;
+  selectTab(localStorage.selectedTab) ;
+}
+
+function removeAllNotebooks() {
+  var idsArray = getIdsArray() ;
+  for (var i=0 ; i < idsArray.length ; i++) {
+    localStorage.removeItem(idsArray[i]) ;
+  }
+}
+
+function getIdsArray() {
+  var idsArray = getIdNumbersArray() ;
+  for (var i = 0 ; i < idsArray.length ; i++) {
+    idsArray[i] = "notebook_" + idsArray[i] ;
+  }
+  return(idsArray) ;
+}
+
+function saveContent(notebookId) {
+  // save notepad content to localStorage
+  var notepad = document.getElementById("notepad") ;
+  localStorage[notebookId] = notepad.value ;
+  // update tab title in case first line of notepad has changed
+  loadNotebookTitle(notebookId) ;
+  console.log(notebookId + "saved") ;
+}
+
+// get digits from string
+// var r = /\d+/
+
+function getIdNumbersArray() {
+  var idNumbersArray = [] ;
+  for (var key in localStorage) {
+    var myIndex = key.indexOf("notebook_") ;
+    if (myIndex === 0) {
+      var number = key.split("_")[1] ;
+      idNumbersArray.push(number) ;
+    }
+  }
+  console.log('idNumbersArray: ' + idNumbersArray) ;
+  return idNumbersArray ;
+}
+
+function getNotebookIdNumber(position) {
+  var idsArray = getIdNumbersArray() ;
+  if (position === "greatest") {
+    var returnValue = Math.max.apply(Math, idsArray);
+  } else if (position === "least") {
+    var returnValue = Math.min.apply(Math, idsArray);
+  }
+  console.log("returning " + returnValue + " notebookId as " + position + " value") ;
+  return returnValue ;
+}
+
+function selectTab(notebookId) {
+  // reset all tab classes to remove ' selectedTab' from the selected tab
+  var tabsList = document.getElementsByClassName('tab') ;
+  for (i = 0 ; i < tabsList.length ; i++) {
+    tabsList[i].className = "tab" ;
+  }
+  // add ' selectedTab' to the selected tab classes
+  document.getElementById(notebookId).className += " selectedTab" ;
+  localStorage.selectedTab = notebookId ;
+  loadContent(notebookId) ;
+  console.log(notebookId + " selected") ;
+  document.getElementById('notepad').focus() ;
+}
+
+function loadContent(notebookId) {
+  var notepad = document.getElementById('notepad') ;
+  var content = localStorage.getItem(notebookId) ;
+  notepad.value = content ;
+}
+
+function loadNotebookTitle(notebookId) {
+  // first line of content is title
+  var content = localStorage[notebookId] ;
+  var firstLine = content.split('\n')[0];
+  var tab = document.getElementById(notebookId) ;
+  tab.innerHTML = firstLine ;
+}
+
+function getTitle(content) {
+  var firstLine = content.split('\n')[0];
+  return firstLine ;
+}
+
+function deleteNotebook(notebookId) {
+  var title = getTitle(localStorage[notebookId]) ;
+  var myConfirm = confirm("Are you sure you would like to delete notebook '" + title + "'") ;
+  if (myConfirm) {
+    localStorage.removeItem(notebookId) ;
+    localStorage.notebookCount-- ;
+    selectTab("notebook_" + getNotebookIdNumber('least')) ;
+    console.log("executing main()") ;
+    main() ;
+  }
+}
+
+function addNotebook() {
+  var greatest = getNotebookIdNumber('greatest') ;
+  greatest++ ;
+  var newNotebookId = "notebook_" + greatest ;
+  localStorage.setItem(newNotebookId , "New Notebook") ;
+  console.log('created item ' + newNotebookId + ' with value ' + localStorage[newNotebookId]) ;
+  localStorage.selectedTab = newNotebookId ;
+  localStorage.notebookCount++ ;
+  main() ;
+}
+
+</script>
+<style>
+
+body {
+  background-color:#111;
+  color:#eee;
+  font-family:monospace;
+  Margin:0px;
+}
+
+#tabsContainer {
+  background-color:#333;
+  display:inline-block;
+  height:100%;
+  width:25%;
+  float:left;
+  font-size:1.15em;
+}
+
+.tab {
+  background-color:#555;
+  padding:5px;
+  margin:5px;
+  border-right:10px solid transparent;
+  cursor:pointer;
+}
+
+.selectedTab {
+  border-right:10px solid #f90;
+}
+
+#notepad {
+  resize:none;
+  height:100%;
+  width:75%;
+  margin:0px;
+  padding:5px;
+  background-color:#033;
+  color:inherit;
+  border:0px;
+  font-size:1.15em;
+}
+
+span {
+  cursor:pointer;
+  padding:5px;
+}
+
+</style>
+</head>
+
+<body onload="main()">
+
+<div id='tabsContainer'></div>
+
+<textarea id='notepad' onkeyup="saveContent(localStorage.selectedTab)"></textarea>
+
+</body>
+</html>
+
